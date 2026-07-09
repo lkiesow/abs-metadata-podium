@@ -12,6 +12,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--host", help="Override ABS_METADATA_PODIUM_HOST")
     parser.add_argument("--port", type=int, help="Override ABS_METADATA_PODIUM_PORT")
     parser.add_argument("--token", help="Override ABS_METADATA_PODIUM_TOKEN")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging (same as ABS_METADATA_PODIUM_DEBUG=1)",
+    )
     return parser
 
 
@@ -25,6 +30,8 @@ def main(argv: list[str] | None = None) -> int:
         config.port = args.port
     if args.token:
         config.auth_token = args.token
+    if args.debug:
+        config.debug = True
 
     app = create_app(config)
     app.run(host=config.host, port=config.port)

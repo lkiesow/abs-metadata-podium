@@ -24,15 +24,30 @@ abs-metadata-podium
 # or: python -m abs_metadata_podium
 # or override host/port/token on the CLI:
 abs-metadata-podium --host 127.0.0.1 --port 9000 --token some-shared-secret
+
+# enable debug logging (logs the Podium URLs requested and the metadata parsed from each page):
+abs-metadata-podium --debug
 ```
 
 Environment variables:
 
-| Variable                      | Default     | Purpose                                                                   |
-|-------------------------------|-------------|---------------------------------------------------------------------------|
-| `ABS_METADATA_PODIUM_TOKEN`   | unset       | Shared secret expected in the `AUTHORIZATION` header. If unset, auth is disabled (dev-only). |
-| `ABS_METADATA_PODIUM_HOST`    | `0.0.0.0`   | Host to bind to.                                                          |
-| `ABS_METADATA_PODIUM_PORT`    | `8000`      | Port to bind to.                                                          |
+| Variable                    | Default   | Purpose                                                                                      |
+|-----------------------------|-----------|----------------------------------------------------------------------------------------------|
+| `ABS_METADATA_PODIUM_TOKEN` | unset     | Shared secret expected in the `AUTHORIZATION` header. If unset, auth is disabled (dev-only). |
+| `ABS_METADATA_PODIUM_HOST`  | `0.0.0.0` | Host to bind to.                                                                             |
+| `ABS_METADATA_PODIUM_PORT`  | `8000`    | Port to bind to.                                                                             |
+| `ABS_METADATA_PODIUM_DEBUG` | unset     | Set to `1`/`true`/`yes` to enable debug logging (same as `--debug`).                         |
+
+### Debugging "no metadata found"
+
+Run with `--debug` (or `ABS_METADATA_PODIUM_DEBUG=1`) and watch the logs while
+Audiobookshelf performs a search. This logs: the incoming `query`/`author`
+from ABS, every Podium URL requested (search page and each detail page) with
+its HTTP status, how many search results were found vs. filtered out, and the
+full metadata parsed from each detail page. This will show, for example,
+whether ABS is sending an unexpected query, whether Podium is returning a
+non-200 response, or whether Podium's page structure has changed and broken
+the scraper.
 
 ## Configure in Audiobookshelf
 

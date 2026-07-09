@@ -32,15 +32,26 @@ def search(
 ) -> list[BookMetadata]:
     session = session or requests.Session()
     search_term = f"{query} {author}" if author else query
+    logger.debug("search(): query=%r author=%r -> search_term=%r", query, author, search_term)
 
     search_html = _fetch_search_page_html(search_term, session, timeout)
     candidates = _parse_search_results(search_html)
+    logger.debug("search(): %d candidate(s) found: %s", len(candidates), candidates)
+    if not candidates:
+        logger.debug(
+            "search(): no candidates matched - either Podium has no results for %r, "
+            "or the search page's HTML structure no longer matches what this scraper expects",
+            search_term,
+        )
 
     results = []
-    for url, _title in candidates[:MAX_RESULTS]:
+    for url, title in candidates[:MAX_RESULTS]:
         try:
+            logger.debug("search(): fetching detail page for %r: %s", title, url)
             detail_html = _fetch_detail_page_html(url, session, timeout)
-            results.append(parse_detail_page(detail_html, url))
+            book = parse_detail_page(detail_html, url)
+            logger.debug("search(): parsed metadata from %s: %s", url, book.to_dict())
+            results.append(book)
         except Exception:
             logger.warning("Failed to fetch/parse detail page %s", url, exc_info=True)
     return results
@@ -53,20 +64,35 @@ def _fetch_search_page_html(query: str, session: requests.Session, timeout: floa
         headers={"User-Agent": USER_AGENT},
         timeout=timeout,
     )
+    logger.debug(
+        "GET %s -> %s %s (%d bytes)",
+        response.url,
+        response.status_code,
+        response.reason,
+        len(response.content),
+    )
     response.raise_for_status()
     return response.text
 
 
 def _fetch_detail_page_html(url: str, session: requests.Session, timeout: float) -> str:
     response = session.get(url, headers={"User-Agent": USER_AGENT}, timeout=timeout)
+    logger.debug(
+        "GET %s -> %s %s (%d bytes)",
+        response.url,
+        response.status_code,
+        response.reason,
+        len(response.content),
+    )
     response.raise_for_status()
     return response.text
 
 
 def _parse_search_results(html: str) -> list[tuple[str, str]]:
     soup = BeautifulSoup(html, "html.parser")
+    anchors = soup.select('a[href^="/titles/"]')
     results = []
-    for anchor in soup.select('a[href^="/titles/"]'):
+    for anchor in anchors:
         img = anchor.find("img", attrs={"data-testid": "grid-image"})
         if img is None:
             continue
@@ -75,6 +101,11 @@ def _parse_search_results(html: str) -> list[tuple[str, str]]:
             continue
         url = urljoin(BASE_URL, anchor["href"])
         results.append((url, title))
+    logger.debug(
+        "_parse_search_results(): %d '/titles/' link(s) on page, %d matched the grid-image filter",
+        len(anchors),
+        len(results),
+    )
     return results
 
 
@@ -112,6 +143,10 @@ def _find_audiobook_jsonld(soup: BeautifulSoup) -> dict | None:
             continue
         if data.get("@type") == "Audiobook":
             return data
+    logger.warning(
+        "No 'Audiobook' JSON-LD block found on detail page - Podium's page structure may "
+        "have changed; title/author/cover/etc. will fall back to data-testid scraping only"
+    )
     return None
 
 
