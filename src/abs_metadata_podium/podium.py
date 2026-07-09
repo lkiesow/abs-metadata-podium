@@ -2,7 +2,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -16,6 +16,8 @@ USER_AGENT = (
 )
 DEFAULT_TIMEOUT = 10.0
 MAX_RESULTS = 5
+COVER_IMAGE_WIDTH = 1080
+COVER_IMAGE_QUALITY = 75
 
 _SERIES_RE = re.compile(r"^(.*),\s*Book\s+([\d.,\s]+)$")
 _HOURS_RE = re.compile(r"(\d+)\s*hr")
@@ -111,6 +113,16 @@ def _parse_search_results(html: str) -> list[tuple[str, str]]:
     return results
 
 
+def _cover_url(image_url: str) -> str:
+    # Podium's own asset CDN serves images with the wrong Content-Type
+    # (binary/octet-stream), which Audiobookshelf rejects. Their site works
+    # around this itself by loading covers through Next.js's image
+    # optimizer, which re-serves the same bytes with a correct Content-Type
+    # - so we return that URL instead of the raw asset URL.
+    params = urlencode({"url": image_url, "w": COVER_IMAGE_WIDTH, "q": COVER_IMAGE_QUALITY})
+    return f"{BASE_URL}/_next/image?{params}"
+
+
 def parse_detail_page(html: str, url: str) -> BookMetadata:
     soup = BeautifulSoup(html, "html.parser")
     ld = _find_audiobook_jsonld(soup)
@@ -129,7 +141,7 @@ def parse_detail_page(html: str, url: str) -> BookMetadata:
         publisher=(ld.get("publisher") or {}).get("name") if ld else None,
         published_year=_parse_published_year(ld, soup),
         description=_parse_description(ld, soup),
-        cover=ld.get("image") if ld else None,
+        cover=_cover_url(ld["image"]) if ld and ld.get("image") else None,
         genres=list(ld.get("genre") or []) if ld else [],
         series=_parse_series_field(soup),
         language=_text_after_prefix(soup, "label-language", "Language: "),

@@ -38,7 +38,11 @@ def test_parse_detail_page_shadow_of_mars():
     assert book.language == "English"
     assert book.duration == 723
     assert book.series == [podium.SeriesMetadata(series="Starship's Mage", sequence="18")]
-    assert book.cover == "https://assets.podiumentertainment.com/medium/direct_cover_art/9798347007936.jpg"
+    assert book.cover == (
+        "https://podiumentertainment.com/_next/image?"
+        "url=https%3A%2F%2Fassets.podiumentertainment.com%2Fmedium%2Fdirect_cover_art%2F9798347007936.jpg"
+        "&w=1080&q=75"
+    )
     assert book.description
 
 
@@ -56,6 +60,15 @@ def test_parse_detail_page_handles_multiple_authors():
     assert book.genres == ["LitRPG & Gamelit"]
     assert book.duration == 20 * 60 + 5
     assert book.series == [podium.SeriesMetadata(series="He Who Fights with Monsters", sequence="5")]
+
+
+def test_cover_url_wraps_raw_asset_url_in_next_image_endpoint():
+    raw_url = "https://assets.podiumentertainment.com/medium/direct_cover_art/9781039407633.jpg"
+    assert podium._cover_url(raw_url) == (
+        "https://podiumentertainment.com/_next/image?"
+        "url=https%3A%2F%2Fassets.podiumentertainment.com%2Fmedium%2Fdirect_cover_art%2F9781039407633.jpg"
+        "&w=1080&q=75"
+    )
 
 
 @pytest.mark.parametrize(
