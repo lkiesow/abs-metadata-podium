@@ -30,18 +30,20 @@ def search(
     session: requests.Session | None = None,
     timeout: float = DEFAULT_TIMEOUT,
 ) -> list[BookMetadata]:
+    # `author` is accepted for spec compliance but deliberately not appended to the
+    # Podium search term - Podium's search returns zero results for combined
+    # "title author" queries, even when both would individually match.
     session = session or requests.Session()
-    search_term = f"{query} {author}" if author else query
-    logger.debug("search(): query=%r author=%r -> search_term=%r", query, author, search_term)
+    logger.debug("search(): query=%r author=%r (author is ignored - see below)", query, author)
 
-    search_html = _fetch_search_page_html(search_term, session, timeout)
+    search_html = _fetch_search_page_html(query, session, timeout)
     candidates = _parse_search_results(search_html)
     logger.debug("search(): %d candidate(s) found: %s", len(candidates), candidates)
     if not candidates:
         logger.debug(
             "search(): no candidates matched - either Podium has no results for %r, "
             "or the search page's HTML structure no longer matches what this scraper expects",
-            search_term,
+            query,
         )
 
     results = []

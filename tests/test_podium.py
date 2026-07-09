@@ -102,3 +102,20 @@ def test_search_orchestration_uses_fetch_functions(monkeypatch):
 
     assert len(results) == 2
     assert {b.title for b in results} == {"Shadow of Mars"}
+
+
+def test_search_does_not_append_author_to_the_podium_query(monkeypatch):
+    search_html = load_fixture("search_shadow_of_mars.html")
+    detail_html = load_fixture("detail_shadow_of_mars.html")
+    captured_queries = []
+
+    def fake_fetch_search_page_html(query, session, timeout):
+        captured_queries.append(query)
+        return search_html
+
+    monkeypatch.setattr(podium, "_fetch_search_page_html", fake_fetch_search_page_html)
+    monkeypatch.setattr(podium, "_fetch_detail_page_html", lambda *a, **k: detail_html)
+
+    podium.search("Shadow of Mars", author="Glynn Stewart")
+
+    assert captured_queries == ["Shadow of Mars"]
