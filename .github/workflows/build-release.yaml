@@ -1,0 +1,38 @@
+name: Create new release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build source tarball
+        run: >
+          git archive --format=tar.gz
+          --prefix="abs-metadata-podium-${{ github.ref_name }}/"
+          -o "abs-metadata-podium-${{ github.ref_name }}.tar.gz"
+          HEAD
+
+      - name: Build noarch RPM
+        run: >
+          docker run
+          -v .:/rpmbuild
+          quay.io/centos/centos:stream10
+          /rpmbuild/.rpm/build-rpm.sh
+          "abs-metadata-podium-${{ github.ref_name }}.tar.gz"
+          "${{ github.ref_name }}"
+
+      - run: file abs-metadata-podium*.rpm
+
+      - name: create new release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: abs-metadata-podium*.tar.gz,abs-metadata-podium*.rpm
+          fail_on_unmatched_files: true
+          generate_release_notes: true

@@ -1,0 +1,16 @@
+[Unit]
+Description=Audiobookshelf custom metadata provider for Podium Entertainment
+Documentation=https://github.com/lkiesow/abs-metadata-podium
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=abs-metadata-podium
+Group=abs-metadata-podium
+EnvironmentFile=/etc/abs-metadata-podium.conf
+ExecStart=/usr/bin/abs-metadata-podium
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
